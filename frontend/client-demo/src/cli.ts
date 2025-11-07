@@ -54,7 +54,8 @@ async function main() {
   console.log("═══════════════════════════════════════════════════════\n");
 
   try {
-    const signature = "5J8..."; // we will have to Replace with real signature historical tx, lol wait, gotta find a txn huihuihuii
+    // Real devnet transaction from slot 419800000
+    const signature = "48xStxW3Z39DmnxNGkhTCpYiQVqf96tALiQm2qdfRrERkUD6GcigHcR92NUVb9ebZyVFRMd3mbWDngJSfZ2T44gF";
 
     const response = await client.request("getTransaction", [
       signature,
@@ -77,9 +78,9 @@ async function main() {
   console.log("═══════════════════════════════════════════════════════\n");
 
   try {
-    // Get a recent block
+    // Real devnet historical block
     const response = await client.request("getBlock", [
-      100,
+      419800000,
       { encoding: "json", maxSupportedTransactionVersion: 0 },
     ]);
 

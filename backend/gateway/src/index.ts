@@ -1,4 +1,5 @@
 import express, { Request, Response } from "express";
+import cors from "cors";
 import config from "./config";
 import { x402PaymentMiddleware } from "./middleware";
 import { proxyToUpstream, validateJsonRpcRequest } from "./proxy";
@@ -8,6 +9,10 @@ const app = express();
 
 // Middleware
 app.use(express.json());
+app.use(cors({
+  origin: ['http://localhost:3001', 'http://localhost:3000'],
+  credentials: true,
+}));
 
 // Health check
 app.get("/health", (req: Request, res: Response) => {

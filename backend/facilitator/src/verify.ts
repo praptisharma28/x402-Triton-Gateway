@@ -15,6 +15,12 @@ export async function verifyPayment(
 ): Promise<VerifyResponse> {
   const { payment, requirements } = request;
 
+  // Mock mode - skip validation for testing
+  if (process.env.MOCK_KORA === "true") {
+    console.log("[VERIFY] Mock mode: Payment validation passed");
+    return { isValid: true };
+  }
+
   try {
     // 1. Validate transaction structure
     const validationResult = await koraClient.validateTransaction(

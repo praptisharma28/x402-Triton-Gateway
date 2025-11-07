@@ -9,11 +9,17 @@ export class KoraClient {
   private rpcUrl: string;
   private apiKey: string;
   private connection: Connection;
+  private mockMode: boolean;
 
   constructor(rpcUrl: string, apiKey: string, solanaRpcUrl: string) {
     this.rpcUrl = rpcUrl;
     this.apiKey = apiKey;
     this.connection = new Connection(solanaRpcUrl, "confirmed");
+    this.mockMode = process.env.MOCK_KORA === "true";
+
+    if (this.mockMode) {
+      console.log("[KORA] Running in MOCK MODE - simulating successful responses");
+    }
   }
 
   /**
@@ -33,6 +39,11 @@ export class KoraClient {
    * Sign transaction (verify without broadcasting)
    */
   async signTransaction(transactionBase64: string): Promise<boolean> {
+    if (this.mockMode) {
+      console.log("[KORA] Mock: Transaction validation passed");
+      return true;
+    }
+
     try {
       const response = await this.request("signTransaction", [
         {
@@ -52,6 +63,17 @@ export class KoraClient {
    * Sign and send transaction (broadcast to network)
    */
   async signAndSendTransaction(transactionBase64: string): Promise<string> {
+    if (this.mockMode) {
+      // Generate a realistic mock signature
+      const mockSignature = Buffer.from(
+        Array.from({ length: 64 }, () => Math.floor(Math.random() * 256))
+      ).toString("base64").replace(/[+/=]/g, (c) =>
+        c === '+' ? 'A' : c === '/' ? 'B' : ''
+      ).substring(0, 88);
+      console.log(`[KORA] Mock: Transaction broadcasted with signature: ${mockSignature}`);
+      return mockSignature;
+    }
+
     try {
       const response = await this.request("signAndSendTransaction", [
         {
