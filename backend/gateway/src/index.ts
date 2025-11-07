@@ -14,6 +14,17 @@ app.use(cors({
   credentials: true,
 }));
 
+// Enable CORS for dashboard
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-PAYMENT');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Health check
 app.get("/health", (req: Request, res: Response) => {
   res.json({
