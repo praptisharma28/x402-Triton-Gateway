@@ -1,13 +1,13 @@
 # Facilitator Service
 
-Kora-backed facilitator that handles x402 payment verification and settlement with gasless transactions.
+Payment facilitator that handles x402 payment verification and settlement for Old Faithful access.
 
 ## Features
 
-- **Payment Verification**: Simulates transactions via Kora without broadcasting
-- **Payment Settlement**: Signs and broadcasts transactions to Solana
-- **Gasless Transactions**: Kora pays network fees on behalf of users
-- **Policy Enforcement**: Kora validates transactions against configured policies
+- **Payment Verification**: Validates transaction structure and payment amounts
+- **Payment Settlement**: Broadcasts user-signed transactions to Solana
+- **User-Pays-Gas**: Users sign and pay for their own transaction fees
+- **Transaction Validation**: Ensures proper SPL token transfers
 - **Capability Advertisement**: `/supported` endpoint for client discovery
 
 ## Architecture
@@ -15,12 +15,25 @@ Kora-backed facilitator that handles x402 payment verification and settlement wi
 ```
 Gateway
    ↓
-Facilitator (/verify) → Kora RPC (signTransaction)
-   ↓                         ↓
-Facilitator (/settle) → Kora RPC (signAndSendTransaction)
-   ↓                         ↓
+Facilitator (/verify) → Validate Transaction Structure
+   ↓
+Facilitator (/settle) → Broadcast to Solana (Helius RPC)
+   ↓
 Transaction Signature ← Solana Network
 ```
+
+## How It Works
+
+1. User creates and signs USDC transfer transaction in their wallet
+2. Gateway forwards transaction to facilitator for verification
+3. Facilitator validates:
+   - Transaction is properly formatted and signed
+   - SPL token transfer instruction exists
+   - Transfer amount matches requirements
+   - Recipient matches expected address
+4. Facilitator broadcasts transaction to Solana mainnet
+5. Facilitator waits for confirmation
+6. Returns transaction signature to gateway
 
 ## Endpoints
 
@@ -32,8 +45,8 @@ Advertise facilitator capabilities.
 {
   "version": 1,
   "scheme": ["exact"],
-  "network": ["devnet"],
-  "feePayer": "KORA_SIGNER_PUBLIC_KEY"
+  "network": ["mainnet-beta"],
+  "feePayer": "PAYMENT_RECIPIENT_ADDRESS"
 }
 ```
 
@@ -46,8 +59,9 @@ Verify payment transaction without broadcasting.
   "payment": {
     "version": 1,
     "scheme": "exact",
-    "network": "devnet",
-    "transaction": "BASE64_ENCODED_SIGNED_TRANSACTION"
+    "network": "mainnet-beta",
+    "transaction": "BASE64_ENCODED_SIGNED_TRANSACTION",
+    "invoiceId": "UUID"
   },
   "requirements": {
     "version": 1,
@@ -56,7 +70,7 @@ Verify payment transaction without broadcasting.
     "mint": "USDC_MINT_ADDRESS",
     "amount": "20",
     "currency": "USDC",
-    "network": "devnet",
+    "network": "mainnet-beta",
     "invoiceId": "UUID"
   }
 }
@@ -90,112 +104,43 @@ Settle payment by broadcasting to Solana.
 }
 ```
 
-## Kora Setup
+### `GET /health`
+Health check endpoint.
 
-### 1. Install Kora
-
-```bash
-# Download Kora binary
-curl -L https://github.com/kora-network/kora/releases/download/vX.X.X/kora-darwin-arm64 -o kora
-chmod +x kora
-mv kora /usr/local/bin/
-```
-
-### 2. Generate Signer Keypair
-
-```bash
-solana-keygen new --outfile ~/.config/solana/kora-signer.json
-```
-
-### 3. Fund Signer (Devnet)
-
-```bash
-solana airdrop 2 $(solana-keygen pubkey ~/.config/solana/kora-signer.json) --url devnet
-```
-
-### 4. Create `kora.toml`
-
-```toml
-# Server Configuration
-bind_address = "127.0.0.1:8080"
-rpc_url = "https://api.devnet.solana.com"
-
-# API Keys (for facilitator authentication)
-[[api_keys]]
-key = "your_api_key_here"
-name = "facilitator"
-
-# Policy: Allow USDC transfers only
-[[policies]]
-name = "usdc_only"
-type = "allowlist"
-
-[[policies.allowlist]]
-# Devnet USDC mint
-address = "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-program = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-
-# Allowed programs
-[[policies.allowlist]]
-# System Program
-address = "11111111111111111111111111111111"
-
-[[policies.allowlist]]
-# Associated Token Program
-address = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-
-[[policies.allowlist]]
-# Compute Budget Program
-address = "ComputeBudget111111111111111111111111111111"
-
-# Fee Payer Configuration
-[fee_payer]
-max_lamports_per_transaction = 10000
-max_transactions_per_minute = 100
-```
-
-### 5. Create `signers.toml`
-
-```toml
-[[signers]]
-name = "main_signer"
-type = "memory"
-private_key_env = "KORA_SIGNER_PRIVATE_KEY"
-weight = 1
-```
-
-### 6. Set Environment Variable
-
-```bash
-# Extract private key from keypair file
-export KORA_SIGNER_PRIVATE_KEY=$(cat ~/.config/solana/kora-signer.json | jq -r '.[0:32] | map(tostring) | join(",")')
-```
-
-### 7. Start Kora
-
-```bash
-kora --config kora.toml --signers signers.toml
+**Response:**
+```json
+{
+  "status": "ok",
+  "timestamp": 1699999999999,
+  "network": "mainnet-beta",
+  "solanaRpcUrl": "https://mainnet.helius-rpc.com/..."
+}
 ```
 
 ## Configuration
 
-See `.env.example` for environment variables:
+Environment variables (see `.env`):
 
 ```bash
+# Server
 FACILITATOR_PORT=3000
-KORA_RPC_URL=http://localhost:8080
-KORA_API_KEY=your_api_key_here
-KORA_PAYER_ADDRESS=<kora_signer_public_key>
-NETWORK=devnet
+FACILITATOR_HOST=0.0.0.0
+
+# Network
+NETWORK=mainnet-beta
+SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=YOUR_KEY
+
+# Payment
+RECIPIENT_WALLET=62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf
 ```
 
 ## Running
 
 ```bash
-# Development
+# Development (auto-reload)
 pnpm dev
 
-# Production
+# Production build
 pnpm build
 pnpm start
 ```
@@ -207,47 +152,69 @@ pnpm start
 curl http://localhost:3000/supported
 ```
 
+### Test /health endpoint
+```bash
+curl http://localhost:3000/health
+```
+
 ### Test /verify endpoint
 ```bash
 curl -X POST http://localhost:3000/verify \
   -H "Content-Type: application/json" \
   -d '{
-    "payment": { ... },
-    "requirements": { ... }
+    "payment": {
+      "version": 1,
+      "scheme": "exact",
+      "network": "mainnet-beta",
+      "transaction": "BASE64_TX",
+      "invoiceId": "test-uuid"
+    },
+    "requirements": {
+      "version": 1,
+      "recipient": "WALLET_ADDRESS",
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "amount": "20",
+      "currency": "USDC",
+      "network": "mainnet-beta",
+      "invoiceId": "test-uuid"
+    }
   }'
 ```
 
 ## Verification Logic
 
 The facilitator verifies:
-1. ✅ Transaction structure is valid
-2. ✅ Transaction is properly signed
-3. ✅ Token transfer instruction exists
-4. ✅ Transfer amount meets or exceeds requirements
-5. ✅ Recipient token account matches
-6. ✅ Kora policy allows the transaction
+1. Transaction structure is valid
+2. Transaction is properly signed by user
+3. SPL token transfer instruction exists
+4. Transfer instruction type is Transfer (3) or TransferChecked (12)
+5. Transfer amount meets or exceeds requirements
+6. Recipient token account matches (if specified)
 
 ## Error Handling
 
 Common errors:
-- `Invalid transaction`: Malformed transaction data
+- `Invalid transaction: ...`: Malformed transaction data
 - `No token transfer instruction found`: Missing SPL token transfer
-- `Insufficient payment`: Amount less than required
-- `Wrong recipient`: Token account mismatch
-- `Kora rejected the transaction`: Policy violation
+- `Insufficient payment: X < Y`: Amount less than required
+- `Wrong recipient: X != Y`: Token account mismatch
+- `Not a token transfer instruction`: Wrong instruction type
 
 ## Production Considerations
 
-1. **Rate Limiting**: Add rate limits per IP/API key
+1. **Rate Limiting**: Add rate limits per wallet/IP address
 2. **Monitoring**: Track verification/settlement success rates
 3. **Logging**: Centralized logging for all transactions
-4. **Kora High Availability**: Run multiple Kora instances
+4. **RPC Redundancy**: Use multiple RPC endpoints with fallback
 5. **Database**: Store settlement records for auditing
 6. **Error Recovery**: Retry logic for failed broadcasts
+7. **Transaction Fees**: Monitor SOL balance for potential future uses
 
 ## Security
 
-- Kora signer must have sufficient SOL for fees
-- API keys should be rotated regularly
-- Policies must restrict to approved programs/mints
-- Never expose private keys in logs or responses
+- Users sign their own transactions with their wallets
+- Users pay their own gas fees (non-custodial)
+- Transaction validation prevents overpayment detection issues
+- No private keys stored on facilitator
+- All transactions verified on-chain
+- Unique blockhash prevents replay attacks

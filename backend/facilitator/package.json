@@ -1,7 +1,7 @@
 {
   "name": "facilitator",
   "version": "1.0.0",
-  "description": "Kora-backed x402 Facilitator Service",
+  "description": "x402 Payment Facilitator Service for Old Faithful",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

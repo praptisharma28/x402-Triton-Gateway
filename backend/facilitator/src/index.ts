@@ -5,13 +5,11 @@ import {
   SettleRequest,
 } from "@x402-gateway/types";
 import config from "./config";
-import { koraClient } from "./kora";
 import { verifyPayment } from "./verify";
 import { settlePayment } from "./settle";
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 
 /**
@@ -20,16 +18,7 @@ app.use(express.json());
  */
 app.get("/supported", async (req: Request, res: Response) => {
   try {
-    // Get fee payer address from Kora
-    let feePayer = config.feePayerAddress;
-    if (!feePayer) {
-      try {
-        feePayer = await koraClient.getPayerSigner();
-      } catch (error) {
-        console.warn("[SUPPORTED] Could not fetch fee payer from Kora, using placeholder");
-        feePayer = "KORA_FEE_PAYER_ADDRESS";
-      }
-    }
+    const feePayer = config.feePayerAddress || "62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf";
 
     const response: FacilitatorSupportedResponse = {
       version: 1,
@@ -109,8 +98,8 @@ app.get("/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
     timestamp: Date.now(),
-    koraRpcUrl: config.koraRpcUrl,
     network: config.network,
+    solanaRpcUrl: config.solanaRpcUrl,
   });
 });
 
@@ -119,17 +108,17 @@ function start() {
   app.listen(config.port, config.host, () => {
     console.log(`
 ╔═══════════════════════════════════════════════════════╗
-║   x402 Facilitator Service (Kora-backed)              ║
+║   x402 Facilitator Service                            ║
 ╚═══════════════════════════════════════════════════════╝
 
-🚀 Server running at: http://${config.host}:${config.port}
-🌐 Network: ${config.network}
-🔧 Kora RPC: ${config.koraRpcUrl}
+Server running at: http://${config.host}:${config.port}
+Network: ${config.network}
+Solana RPC: ${config.solanaRpcUrl}
 
 Endpoints:
   GET  /supported          - Facilitator capabilities
-  POST /verify             - Verify payment (simulation)
-  POST /settle             - Settle payment (broadcast)
+  POST /verify             - Verify payment transaction
+  POST /settle             - Settle payment (broadcast to Solana)
   GET  /health             - Health check
 
 Ready to facilitate payments!
@@ -139,12 +128,12 @@ Ready to facilitate payments!
 
 // Handle shutdown
 process.on("SIGINT", () => {
-  console.log("\n\n👋 Shutting down gracefully...");
+  console.log("\n\nShutting down gracefully...");
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  console.log("\n\n👋 Shutting down gracefully...");
+  console.log("\n\nShutting down gracefully...");
   process.exit(0);
 });
 

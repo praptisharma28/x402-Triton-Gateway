@@ -5,7 +5,6 @@ import {
   PaymentRequirements,
 } from "@x402-gateway/types";
 import { Transaction, PublicKey } from "@solana/web3.js";
-import { koraClient } from "./kora";
 
 /**
  * Verify payment transaction against requirements
@@ -15,29 +14,12 @@ export async function verifyPayment(
 ): Promise<VerifyResponse> {
   const { payment, requirements } = request;
 
-  // Mock mode - skip validation for testing
-  if (process.env.MOCK_KORA === "true") {
-    console.log("[VERIFY] Mock mode: Payment validation passed");
-    return { isValid: true };
-  }
+  console.log("[VERIFY] Verifying payment transaction...");
 
   try {
-    // 1. Validate transaction structure
-    const validationResult = await koraClient.validateTransaction(
-      payment.transaction
-    );
-    if (!validationResult.isValid) {
-      return {
-        isValid: false,
-        error: `Invalid transaction: ${validationResult.error}`,
-      };
-    }
-
-    // 2. Decode transaction and verify instructions
     const txBuffer = Buffer.from(payment.transaction, "base64");
     const transaction = Transaction.from(txBuffer);
 
-    // 3. Verify payment details match requirements
     const verificationResult = verifyTransactionInstructions(
       transaction,
       requirements
@@ -49,18 +31,10 @@ export async function verifyPayment(
       };
     }
 
-    // 4. Sign transaction with Kora (simulation/verification)
-    const koraSignResult = await koraClient.signTransaction(
-      payment.transaction
-    );
-    if (!koraSignResult) {
-      return {
-        isValid: false,
-        error: "Kora rejected the transaction (policy violation)",
-      };
-    }
+    // Transaction is already signed by user and validated
+    // The user has signed with their wallet and will pay gas fees themselves
+    console.log("[VERIFY] Transaction validated successfully");
 
-    // All checks passed
     return { isValid: true };
   } catch (error) {
     console.error("[VERIFY] Error verifying payment:", error);

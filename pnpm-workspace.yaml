@@ -2,6 +2,5 @@ packages:
   - 'backend/gateway'
   - 'backend/facilitator'
   - 'frontend/dashboard'
-  - 'frontend/client-demo'
   - 'shared/types'
   - 'shared/utils'

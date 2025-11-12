@@ -129,7 +129,7 @@ export default function Dashboard() {
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-8">
             <div>
               <h1 className="text-5xl md:text-6xl font-serif mb-3 text-neutral-900">
-                x402 Gateway
+                x402 Triton Gateway
               </h1>
               <p className="text-neutral-600 font-sans text-base font-light">
                 Real-time analytics for Old Faithful data access
@@ -173,6 +173,145 @@ export default function Dashboard() {
                 {autoRefresh ? 'Auto On' : 'Auto Off'}
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Old Faithful Banner */}
+        <div className="bg-gradient-to-r from-blue-50 via-blue-100 to-purple-50 border-l-4 border-blue-500 rounded-lg p-6 mb-8 shadow">
+          <div className="flex items-start gap-4">
+            <div className="flex-1">
+              <h2 className="text-xl font-serif font-semibold text-blue-900 mb-2">
+                Powered by Old Faithful
+              </h2>
+              <p className="text-sm text-blue-800 font-sans mb-3">
+                This gateway provides paid access to Solana's complete historical data via Triton's Old Faithful archive.
+                Users pay micro-amounts in USDC per query using the x402 protocol.
+              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
+                  Epoch 800 Live
+                </span>
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
+                  Mainnet-Beta
+                </span>
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
+                  x402 Protocol
+                </span>
+                <a
+                  href="/client"
+                  className="px-3 py-1 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Try Demo →
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* How It Works */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-12 border border-neutral-200">
+          <h2 className="text-3xl font-serif text-neutral-900 mb-6 text-center">
+            How It Works
+          </h2>
+          <div className="grid md:grid-cols-5 gap-6">
+            {/* Step 1 */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center text-2xl">
+                🔌
+              </div>
+              <div className="mb-2">
+                <span className="inline-block px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-bold font-sans">
+                  STEP 1
+                </span>
+              </div>
+              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+                Connect Wallet
+              </h3>
+              <p className="text-sm text-neutral-600 font-sans">
+                Link your Phantom or Solflare wallet
+              </p>
+            </div>
+
+            {/* Step 2 */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center text-2xl">
+                🔍
+              </div>
+              <div className="mb-2">
+                <span className="inline-block px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold font-sans">
+                  STEP 2
+                </span>
+              </div>
+              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+                Query Data
+              </h3>
+              <p className="text-sm text-neutral-600 font-sans">
+                Enter transaction signature from Epoch 800
+              </p>
+            </div>
+
+            {/* Step 3 */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center text-2xl">
+                💳
+              </div>
+              <div className="mb-2">
+                <span className="inline-block px-3 py-1 bg-amber-600 text-white rounded-full text-xs font-bold font-sans">
+                  STEP 3
+                </span>
+              </div>
+              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+                HTTP 402
+              </h3>
+              <p className="text-sm text-neutral-600 font-sans">
+                Receive payment invoice with amount
+              </p>
+            </div>
+
+            {/* Step 4 */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center text-2xl font-bold">
+                $
+              </div>
+              <div className="mb-2">
+                <span className="inline-block px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold font-sans">
+                  STEP 4
+                </span>
+              </div>
+              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+                Pay USDC
+              </h3>
+              <p className="text-sm text-neutral-600 font-sans">
+                Approve micro-payment ($0.00002)
+              </p>
+            </div>
+
+            {/* Step 5 */}
+            <div className="text-center">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center text-2xl font-bold">
+                ✓
+              </div>
+              <div className="mb-2">
+                <span className="inline-block px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-bold font-sans">
+                  STEP 5
+                </span>
+              </div>
+              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+                Get Data
+              </h3>
+              <p className="text-sm text-neutral-600 font-sans">
+                Receive full transaction data instantly
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 text-center">
+            <a
+              href="/client"
+              className="inline-block px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-sans font-bold text-lg shadow-lg"
+            >
+              Try It Now →
+            </a>
           </div>
         </div>
 
@@ -337,7 +476,7 @@ export default function Dashboard() {
             x402 Old Faithful Access Gateway
           </p>
           <p className="text-xs font-sans text-neutral-400">
-            Powered by Triton One · Kora · ParaFi
+            Powered by Triton One · Helius · Solana
           </p>
         </div>
       </div>

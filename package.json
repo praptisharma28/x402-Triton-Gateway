@@ -7,7 +7,6 @@
     "backend/gateway",
     "backend/facilitator",
     "frontend/dashboard",
-    "frontend/client-demo",
     "shared/types",
     "shared/utils"
   ],
@@ -16,7 +15,6 @@
     "dev:gateway": "pnpm --filter gateway dev",
     "dev:facilitator": "pnpm --filter facilitator dev",
     "dev:dashboard": "pnpm --filter dashboard dev",
-    "demo:client": "pnpm --filter client-demo start",
     "build:all": "pnpm -r build",
     "test:all": "pnpm -r test",
     "clean": "pnpm -r clean && rm -rf node_modules"
@@ -28,7 +26,7 @@
     "triton",
     "payments",
     "micropayments",
-    "kora"
+    "solana"
   ],
   "author": "Your Name",
   "license": "MIT",

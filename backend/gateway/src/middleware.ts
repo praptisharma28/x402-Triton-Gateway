@@ -10,6 +10,7 @@ import config from "./config";
 import { getPricing, usdToUsdcLamports } from "./pricing";
 import { receiptStore } from "./receipts";
 import { getTokenAccountAddress } from "./token";
+import { Transaction } from "@solana/web3.js";
 
 /**
  * x402 Payment Middleware
@@ -20,7 +21,6 @@ export function x402PaymentMiddleware() {
     const startTime = Date.now();
 
     try {
-      // Extract JSON-RPC method
       const { method } = req.body;
       if (!method) {
         return res.status(400).json({
@@ -28,24 +28,19 @@ export function x402PaymentMiddleware() {
         });
       }
 
-      // Check if method requires payment
       const pricing = getPricing(method);
       const requiresPayment = pricing.priceUSD > 0;
 
       if (!requiresPayment) {
-        // Free method, pass through
         return next();
       }
 
-      // Check for X-PAYMENT header
       const paymentHeader = req.headers["x-payment"];
 
       if (!paymentHeader) {
-        // No payment provided, return 402
         return send402Response(res, method, pricing.priceUSD);
       }
 
-      // Parse payment payload
       let payment: PaymentPayload;
       try {
         const paymentJson = Buffer.from(
@@ -59,12 +54,10 @@ export function x402PaymentMiddleware() {
         });
       }
 
-      // Get or create receipt
       const invoiceId = extractInvoiceId(payment);
       let receipt = receiptStore.getByInvoiceId(invoiceId);
 
       if (!receipt) {
-        // Create new receipt
         receipt = {
           id: uuidv4(),
           invoiceId,
@@ -84,7 +77,6 @@ export function x402PaymentMiddleware() {
         await receiptStore.save(receipt);
       }
 
-      // Verify payment with facilitator
       const tokenAccount = await getTokenAccountAddress(
         config.recipientWallet,
         config.usdcMint
@@ -102,7 +94,6 @@ export function x402PaymentMiddleware() {
       };
 
       try {
-        // Verify
         const verifyResponse = await axios.post(
           `${config.facilitatorUrl}/verify`,
           {
@@ -124,7 +115,6 @@ export function x402PaymentMiddleware() {
           });
         }
 
-        // Settle
         const settleResponse = await axios.post(
           `${config.facilitatorUrl}/settle`,
           {
@@ -135,14 +125,12 @@ export function x402PaymentMiddleware() {
 
         const txSignature = settleResponse.data.signature;
 
-        // Update receipt
         await receiptStore.update(receipt.id, {
           status: "settled",
           txSignature,
           latencyMs: Date.now() - startTime,
         });
 
-        // Add payment response header
         res.setHeader(
           "X-PAYMENT-RESPONSE",
           JSON.stringify({
@@ -152,10 +140,8 @@ export function x402PaymentMiddleware() {
           })
         );
 
-        // Attach receipt to request for logging
         (req as any).paymentReceipt = receipt;
 
-        // Payment successful, proceed to proxy
         next();
       } catch (error) {
         console.error("[MIDDLEWARE] Payment processing error:", error);
@@ -214,9 +200,7 @@ function send402Response(
  * (In a real implementation, this would be embedded in the transaction)
  */
 function extractInvoiceId(payment: PaymentPayload): string {
-  // For now, generate from transaction hash
-  // In production, decode the transaction and extract memo/invoice ID
-  return Buffer.from(payment.transaction.slice(0, 32)).toString("hex");
+  return payment.invoiceId;
 }
 
 /**
@@ -226,9 +210,23 @@ function extractPayerFromTransaction(transactionBase64: string): string {
   try {
     // Decode transaction and extract fee payer (first signer)
     const txBuffer = Buffer.from(transactionBase64, "base64");
-    // This is a simplified extraction - in production, properly decode the transaction
-    return "extracted_payer_address"; // Placeholder
-  } catch {
+    const transaction = Transaction.from(txBuffer);
+
+    if (transaction.feePayer) {
+      return transaction.feePayer.toBase58();
+    }
+
+    // Fallback: get first signature's public key
+    if (transaction.signatures && transaction.signatures.length > 0) {
+      const firstSigner = transaction.signatures[0].publicKey;
+      if (firstSigner) {
+        return firstSigner.toBase58();
+      }
+    }
+
+    return "unknown";
+  } catch (error) {
+    console.error("[EXTRACT_PAYER] Error extracting payer:", error);
     return "unknown";
   }
 }

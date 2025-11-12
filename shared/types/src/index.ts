@@ -16,9 +16,10 @@ export interface PaymentRequirements {
 
 export interface PaymentPayload {
   version: number;
-  scheme: "exact" | "quote";
+  scheme?: "exact" | "quote";
   network: "devnet" | "mainnet-beta";
   transaction: string; // base64 encoded signed transaction
+  invoiceId: string; // Invoice ID from payment requirements
 }
 
 export interface FacilitatorSupportedResponse {

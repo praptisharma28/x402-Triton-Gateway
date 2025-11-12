@@ -150,7 +150,8 @@ All requests are logged with:
 
 ## Next Steps
 
-1. Set up Kora facilitator (see `backend/facilitator/`)
-2. Fund recipient wallet with devnet USDC
-3. Test with client demo
-4. Deploy dashboard to monitor receipts
+1. Set up facilitator service (see `backend/facilitator/`)
+2. Fund recipient wallet with mainnet USDC
+3. Start Old Faithful on localhost:8899
+4. Test with dashboard client
+5. Monitor receipts and payments

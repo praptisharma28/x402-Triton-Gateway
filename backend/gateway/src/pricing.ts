@@ -2,6 +2,19 @@ import { PricingPolicy } from "@x402-gateway/types";
 import config from "./config";
 
 /**
+ * x402 Integration with Old Faithful
+ *
+ * Old Faithful provides access to Solana's complete historical archive.
+ * These historical queries are expensive to serve and perfect for x402 micropayments.
+ *
+ * Historical Methods (best served by Old Faithful):
+ * - getTransaction, getBlock, getSignaturesForAddress
+ * - getBlockTime, getBlocks, getConfirmedBlock/Transaction
+ *
+ * Premium pricing for historical data enables sustainable archive access.
+ */
+
+/**
  * Pricing policies for different JSON-RPC methods
  */
 export const pricingPolicies: Record<string, PricingPolicy> = {

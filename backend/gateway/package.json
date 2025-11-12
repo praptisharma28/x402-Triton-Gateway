@@ -1,7 +1,7 @@
 {
   "name": "gateway",
   "version": "1.0.0",
-  "description": "x402 Gateway Server for Old Faithful Access",
+  "description": "x402 Triton Gateway Server for Old Faithful Access",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

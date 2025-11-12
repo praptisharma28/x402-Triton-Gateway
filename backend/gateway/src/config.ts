@@ -13,7 +13,10 @@ export const config = {
   network: (process.env.NETWORK || "devnet") as "devnet" | "mainnet-beta",
   solanaRpcUrl: process.env.SOLANA_RPC_URL || "https://api.devnet.solana.com",
 
-  // Upstream (Old Faithful / ParaFi)
+  // Upstream RPC (supports Old Faithful integration)
+  // For Old Faithful: Set UPSTREAM_RPC_URL to your Old Faithful RPC endpoint
+  // Example: http://localhost:8899 (Old Faithful default port)
+  // Or use any Solana RPC provider (ParaFi, Helius, Triton, etc.)
   upstreamRpcUrl:
     process.env.UPSTREAM_RPC_URL || "https://solana-rpc.parafi.tech",
   upstreamGrpcUrl:
@@ -26,7 +29,7 @@ export const config = {
   // Payment
   recipientWallet:
     process.env.RECIPIENT_WALLET ||
-    "11111111111111111111111111111111", // Placeholder
+    "62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf",
   usdcMint:
     process.env.NETWORK === "mainnet-beta"
       ? process.env.USDC_MINT_MAINNET ||

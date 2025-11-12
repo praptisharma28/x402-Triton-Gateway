@@ -7,14 +7,12 @@ import { receiptStore } from "./receipts";
 
 const app = express();
 
-// Middleware
 app.use(express.json());
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000'],
+  origin: ['http://localhost:3001', 'http://localhost:3000', 'http://localhost:3002'],
   credentials: true,
 }));
 
-// Enable CORS for dashboard
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
@@ -25,7 +23,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health check
 app.get("/health", (req: Request, res: Response) => {
   res.json({
     status: "ok",
@@ -35,14 +32,12 @@ app.get("/health", (req: Request, res: Response) => {
   });
 });
 
-// Get receipts (for dashboard)
 app.get("/receipts", (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 50;
   const receipts = receiptStore.getRecent(limit);
   res.json(receipts);
 });
 
-// Get statistics (for dashboard)
 app.get("/stats", (req: Request, res: Response) => {
   const stats = receiptStore.getStats();
   res.json(stats);
@@ -100,11 +95,11 @@ async function start() {
 ║   x402 Old Faithful Access Gateway                    ║
 ╚═══════════════════════════════════════════════════════╝
 
-🚀 Server running at: http://${config.host}:${config.port}
-🌐 Network: ${config.network}
-📡 Upstream: ${config.upstreamRpcUrl}
-💰 Recipient: ${config.recipientWallet}
-🔧 Facilitator: ${config.facilitatorUrl}
+Server running at: http://${config.host}:${config.port}
+Network: ${config.network}
+Upstream: ${config.upstreamRpcUrl}
+Recipient: ${config.recipientWallet}
+Facilitator: ${config.facilitatorUrl}
 
 Endpoints:
   POST /rpc              - JSON-RPC endpoint (x402 protected)
@@ -123,12 +118,12 @@ Ready to accept requests!
 
 // Handle shutdown
 process.on("SIGINT", () => {
-  console.log("\n\n👋 Shutting down gracefully...");
+  console.log("\n\nShutting down gracefully...");
   process.exit(0);
 });
 
 process.on("SIGTERM", () => {
-  console.log("\n\n👋 Shutting down gracefully...");
+  console.log("\n\nShutting down gracefully...");
   process.exit(0);
 });
 
