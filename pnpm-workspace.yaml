@@ -1,0 +1,6 @@
+packages:
+  - 'backend/gateway'
+  - 'backend/facilitator'
+  - 'frontend/dashboard'
+  - 'shared/types'
+  - 'shared/utils'

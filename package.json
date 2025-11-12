@@ -1,0 +1,37 @@
+{
+  "name": "x402-old-faithful-gateway",
+  "version": "1.0.0",
+  "description": "x402-metered Old Faithful Access Gateway for Solana historical data",
+  "private": true,
+  "workspaces": [
+    "backend/gateway",
+    "backend/facilitator",
+    "frontend/dashboard",
+    "shared/types",
+    "shared/utils"
+  ],
+  "scripts": {
+    "install:all": "pnpm install",
+    "dev:gateway": "pnpm --filter gateway dev",
+    "dev:facilitator": "pnpm --filter facilitator dev",
+    "dev:dashboard": "pnpm --filter dashboard dev",
+    "build:all": "pnpm -r build",
+    "test:all": "pnpm -r test",
+    "clean": "pnpm -r clean && rm -rf node_modules"
+  },
+  "keywords": [
+    "x402",
+    "solana",
+    "old-faithful",
+    "triton",
+    "payments",
+    "micropayments",
+    "solana"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
