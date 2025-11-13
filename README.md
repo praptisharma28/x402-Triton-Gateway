@@ -4,6 +4,14 @@
 
 A production-ready micropayment gateway that implements HTTP 402 (Payment Required) to monetize access to historical Solana blockchain data via Old Faithful. Users pay micro-amounts in USDC to query historical transactions and blocks.
 
+**Video Implementation**
+
+
+
+https://github.com/user-attachments/assets/f31c9245-ea00-4e6c-8645-b4b22504cb93
+
+
+
 ## What It Does
 
 This gateway enables monetization of Solana historical data access through:
