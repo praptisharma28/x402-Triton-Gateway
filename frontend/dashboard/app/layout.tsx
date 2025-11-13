@@ -11,11 +11,8 @@ export const metadata: Metadata = {
 function Navigation() {
   return (
     <nav className="border-b border-neutral-200 bg-white">
-      <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto py-4 flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="font-serif text-xl font-semibold text-neutral-900">x402 Triton Gateway</span>
-          </Link>
           <div className="hidden md:flex items-center gap-6">
             <Link href="/" className="text-sm font-sans text-neutral-600 hover:text-neutral-900 transition-colors">
               Dashboard
@@ -26,14 +23,14 @@ function Navigation() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-xs font-sans">
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 border border-neutral-300 text-neutral-700 rounded-md">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
             </span>
-            <span className="font-medium">Old Faithful Live</span>
+            <span className="font-medium">Live</span>
           </div>
-          <div className="px-3 py-1.5 bg-green-50 text-green-700 rounded-full font-medium">
+          <div className="px-3 py-1.5 border border-neutral-300 text-neutral-700 rounded-md font-medium">
             Mainnet
           </div>
         </div>

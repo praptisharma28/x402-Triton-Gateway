@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { OldFaithfulBanner } from './components/OldFaithfulBanner'
 
 const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4021'
 
@@ -131,7 +132,7 @@ export default function Dashboard() {
               <h1 className="text-5xl md:text-6xl font-serif mb-3 text-neutral-900">
                 x402 Triton Gateway
               </h1>
-              <p className="text-neutral-600 font-sans text-base font-light">
+              <p className="text-neutral-600 font-sans text-base">
                 Real-time analytics for Old Faithful data access
               </p>
               <div className="flex items-center gap-3 mt-3">
@@ -177,140 +178,96 @@ export default function Dashboard() {
         </div>
 
         {/* Old Faithful Banner */}
-        <div className="bg-gradient-to-r from-blue-50 via-blue-100 to-purple-50 border-l-4 border-blue-500 rounded-lg p-6 mb-8 shadow">
-          <div className="flex items-start gap-4">
-            <div className="flex-1">
-              <h2 className="text-xl font-serif font-semibold text-blue-900 mb-2">
-                Powered by Old Faithful
-              </h2>
-              <p className="text-sm text-blue-800 font-sans mb-3">
-                This gateway provides paid access to Solana's complete historical data via Triton's Old Faithful archive.
-                Users pay micro-amounts in USDC per query using the x402 protocol.
-              </p>
-              <div className="flex flex-wrap items-center gap-3 text-xs">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full font-medium">
-                  Epoch 800 Live
-                </span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full font-medium">
-                  Mainnet-Beta
-                </span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full font-medium">
-                  x402 Protocol
-                </span>
-                <a
-                  href="/client"
-                  className="px-3 py-1 bg-blue-600 text-white rounded-full font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Try Demo →
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
+        <OldFaithfulBanner />
 
         {/* How It Works */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-12 border border-neutral-200">
-          <h2 className="text-3xl font-serif text-neutral-900 mb-6 text-center">
+        <div className="minimal-card minimal-shadow rounded-lg p-8 mb-12">
+          <h2 className="text-2xl font-serif text-neutral-900 mb-8">
             How It Works
           </h2>
           <div className="grid md:grid-cols-5 gap-6">
             {/* Step 1 */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center text-2xl">
-                🔌
-              </div>
-              <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-blue-600 text-white rounded-full text-xs font-bold font-sans">
-                  STEP 1
+            <div>
+              <div className="mb-3">
+                <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">
+                  Step 1
                 </span>
               </div>
-              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+              <h3 className="font-sans font-medium text-neutral-900 mb-2 text-sm">
                 Connect Wallet
               </h3>
-              <p className="text-sm text-neutral-600 font-sans">
+              <p className="text-sm font-sans text-neutral-600 leading-relaxed">
                 Link your Phantom or Solflare wallet
               </p>
             </div>
 
             {/* Step 2 */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-purple-100 flex items-center justify-center text-2xl">
-                🔍
-              </div>
-              <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-purple-600 text-white rounded-full text-xs font-bold font-sans">
-                  STEP 2
+            <div>
+              <div className="mb-3">
+                <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">
+                  Step 2
                 </span>
               </div>
-              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+              <h3 className="font-sans font-medium text-neutral-900 mb-2 text-sm">
                 Query Data
               </h3>
-              <p className="text-sm text-neutral-600 font-sans">
+              <p className="text-sm font-sans text-neutral-600 leading-relaxed">
                 Enter transaction signature from Epoch 800
               </p>
             </div>
 
             {/* Step 3 */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-100 flex items-center justify-center text-2xl">
-                💳
-              </div>
-              <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-amber-600 text-white rounded-full text-xs font-bold font-sans">
-                  STEP 3
+            <div>
+              <div className="mb-3">
+                <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">
+                  Step 3
                 </span>
               </div>
-              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+              <h3 className="font-sans font-medium text-neutral-900 mb-2 text-sm">
                 HTTP 402
               </h3>
-              <p className="text-sm text-neutral-600 font-sans">
+              <p className="text-sm font-sans text-neutral-600 leading-relaxed">
                 Receive payment invoice with amount
               </p>
             </div>
 
             {/* Step 4 */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center text-2xl font-bold">
-                $
-              </div>
-              <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-green-600 text-white rounded-full text-xs font-bold font-sans">
-                  STEP 4
+            <div>
+              <div className="mb-3">
+                <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">
+                  Step 4
                 </span>
               </div>
-              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+              <h3 className="font-sans font-medium text-neutral-900 mb-2 text-sm">
                 Pay USDC
               </h3>
-              <p className="text-sm text-neutral-600 font-sans">
+              <p className="text-sm font-sans text-neutral-600 leading-relaxed">
                 Approve micro-payment ($0.00002)
               </p>
             </div>
 
             {/* Step 5 */}
-            <div className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-100 flex items-center justify-center text-2xl font-bold">
-                ✓
-              </div>
-              <div className="mb-2">
-                <span className="inline-block px-3 py-1 bg-emerald-600 text-white rounded-full text-xs font-bold font-sans">
-                  STEP 5
+            <div>
+              <div className="mb-3">
+                <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">
+                  Step 5
                 </span>
               </div>
-              <h3 className="font-serif font-semibold text-neutral-900 mb-2">
+              <h3 className="font-sans font-medium text-neutral-900 mb-2 text-sm">
                 Get Data
               </h3>
-              <p className="text-sm text-neutral-600 font-sans">
+              <p className="text-sm font-sans text-neutral-600 leading-relaxed">
                 Receive full transaction data instantly
               </p>
             </div>
           </div>
 
-          <div className="mt-8 text-center">
+          <div className="mt-8 pt-6 border-t border-neutral-200">
             <a
               href="/client"
-              className="inline-block px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-sans font-bold text-lg shadow-lg"
+              className="inline-block px-6 py-2.5 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors font-sans text-sm font-medium"
             >
-              Try It Now →
+              Try Demo →
             </a>
           </div>
         </div>
@@ -324,7 +281,7 @@ export default function Dashboard() {
                 <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">Requests</span>
               </div>
               <p className="text-4xl font-serif text-neutral-900 mb-1">{stats.totalRequests}</p>
-              <p className="text-sm font-sans text-neutral-500 font-light">All-time queries</p>
+              <p className="text-sm font-sans text-neutral-500">All-time queries</p>
             </div>
 
             {/* Total Revenue */}
@@ -333,7 +290,7 @@ export default function Dashboard() {
                 <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">Revenue</span>
               </div>
               <p className="text-4xl font-serif text-neutral-900 mb-1">{formatUSD(stats.totalRevenue)}</p>
-              <p className="text-sm font-sans text-neutral-500 font-light">USDC payments</p>
+              <p className="text-sm font-sans text-neutral-500">USDC payments</p>
             </div>
 
             {/* Avg Latency */}
@@ -342,7 +299,7 @@ export default function Dashboard() {
                 <span className="text-xs font-sans font-medium text-neutral-500 uppercase tracking-wider">Latency</span>
               </div>
               <p className="text-4xl font-serif text-neutral-900 mb-1">{Math.round(stats.averageLatency)}<span className="text-2xl text-neutral-500">ms</span></p>
-              <p className="text-sm font-sans text-neutral-500 font-light">Avg response</p>
+              <p className="text-sm font-sans text-neutral-500">Avg response</p>
             </div>
 
             {/* Success Rate */}
@@ -353,7 +310,7 @@ export default function Dashboard() {
               <p className="text-4xl font-serif text-neutral-900 mb-1">
                 {((1 - stats.failureRate) * 100).toFixed(1)}<span className="text-2xl text-neutral-500">%</span>
               </p>
-              <p className="text-sm font-sans text-neutral-500 font-light">Success rate</p>
+              <p className="text-sm font-sans text-neutral-500">Success rate</p>
             </div>
           </div>
         )}
@@ -388,7 +345,7 @@ export default function Dashboard() {
                 <h2 className="text-2xl font-serif text-neutral-900 mb-2">
                   Recent Receipts
                 </h2>
-                <p className="text-sm font-sans text-neutral-500 font-light">
+                <p className="text-sm font-sans text-neutral-500">
                   {receipts.length} payment{receipts.length !== 1 ? 's' : ''} processed
                 </p>
               </div>
@@ -404,7 +361,7 @@ export default function Dashboard() {
                   </svg>
                 </div>
                 <p className="text-base font-serif text-neutral-900 mb-1">No receipts yet</p>
-                <p className="text-sm font-sans text-neutral-500 font-light">Payments will appear here once processed</p>
+                <p className="text-sm font-sans text-neutral-500">Payments will appear here once processed</p>
               </div>
             ) : (
               <table className="w-full">
@@ -435,8 +392,8 @@ export default function Dashboard() {
                           receipt.status === 'settled' 
                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
                             : receipt.status === 'pending'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                            : 'bg-red-50 text-red-700 border border-red-200'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-neutral-100 text-neutral-700 border border-neutral-200'
                         }`}>
                           <span className="capitalize">{receipt.status}</span>
                         </span>
