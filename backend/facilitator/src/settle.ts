@@ -27,14 +27,9 @@ export async function settlePayment(
 
     console.log(`[SETTLE] Transaction broadcast: ${signature}`);
 
-    // Wait for confirmation (using newer API)
-    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
-    await connection.confirmTransaction({
-      signature,
-      blockhash,
-      lastValidBlockHeight,
-    }, "confirmed");
-    console.log(`[SETTLE] Transaction confirmed: ${signature}`);
+    // Return immediately after broadcast for demo purposes
+    // Transaction will confirm in background
+    console.log(`[SETTLE] Transaction sent, returning signature immediately`);
 
     return {
       signature,

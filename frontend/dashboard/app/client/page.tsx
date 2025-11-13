@@ -145,7 +145,8 @@ export default function ClientPage() {
         {
           headers: {
             'X-PAYMENT': paymentHeader
-          }
+          },
+          timeout: 60000 // 60 second timeout
         }
       )
 
