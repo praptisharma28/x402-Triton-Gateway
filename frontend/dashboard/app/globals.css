@@ -5,9 +5,9 @@
 @layer base {
   * {
     @apply border-neutral-200;
-  }
-  
-  body {
+}
+
+body {
     @apply bg-neutral-50 text-neutral-900;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     min-height: 100vh;
