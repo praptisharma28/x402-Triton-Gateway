@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  facilitator:
+    build:
+      context: .
+      dockerfile: backend/facilitator/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - FACILITATOR_PORT=3000
+      - FACILITATOR_HOST=0.0.0.0
+      - NETWORK=mainnet-beta
+      - SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=16f6fcec-905c-4ebd-8101-dc42aba1187b
+      - RECIPIENT_WALLET=62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf
+    restart: unless-stopped
+    networks:
+      - x402-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: backend/gateway/Dockerfile
+    ports:
+      - "4021:4021"
+    environment:
+      - GATEWAY_PORT=4021
+      - GATEWAY_HOST=0.0.0.0
+      - NETWORK=mainnet-beta
+      - SOLANA_RPC_URL=https://mainnet.helius-rpc.com/?api-key=16f6fcec-905c-4ebd-8101-dc42aba1187b
+      - UPSTREAM_RPC_URL=http://host.docker.internal:8899
+      - FACILITATOR_URL=http://facilitator:3000
+      - RECIPIENT_WALLET=62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf
+      - USDC_MINT_MAINNET=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v
+      - PRICE_GET_TRANSACTION=0.00002
+      - PRICE_GET_BLOCK=0.00005
+      - PRICE_GET_SIGNATURES=0.0001
+    depends_on:
+      - facilitator
+    restart: unless-stopped
+    networks:
+      - x402-network
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: frontend/dashboard/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NEXT_PUBLIC_GATEWAY_URL=http://localhost:4021
+      - NEXT_PUBLIC_SOLANA_RPC=https://mainnet.helius-rpc.com/?api-key=16f6fcec-905c-4ebd-8101-dc42aba1187b
+      - PORT=3001
+      - NODE_ENV=production
+    depends_on:
+      - gateway
+    restart: unless-stopped
+    networks:
+      - x402-network
+
+networks:
+  x402-network:
+    driver: bridge

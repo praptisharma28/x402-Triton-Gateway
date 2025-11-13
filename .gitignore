@@ -53,5 +53,9 @@ signers.toml
 *.sqlite
 *.sqlite3
 
+# Data storage
+data/
+receipts.json
+
 # OS
 Thumbs.db

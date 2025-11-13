@@ -103,11 +103,61 @@ Historical blockchain data is valuable but expensive to maintain. This system:
 
 ## Setup Instructions
 
+You can run this project in two ways:
+1. **Docker** (Recommended) - Quick start with containerized services
+2. **Local Development** - For development and debugging
+
 ### Prerequisites
-- Node.js 18+
-- pnpm
-- Solana CLI (optional, for wallet management)
-- Old Faithful running on port 8899
+- **For Docker**: Docker Desktop
+- **For Local Dev**: Node.js 18+, pnpm
+- **Both**: Old Faithful CLI binary (`/tmp/faithful-cli`)
+
+---
+
+## 🐳 Docker Setup (Recommended)
+
+### Quick Start with Docker
+
+**Terminal 1 - Start Old Faithful:**
+```bash
+/tmp/faithful-cli rpc --listen :8899 old-faithful-epoch-800.yml
+```
+
+**Terminal 2 - Start All Services:**
+```bash
+docker-compose up --build
+```
+
+**Access the Application:**
+- Dashboard: http://localhost:3001
+- Client Demo: http://localhost:3001/client
+- Gateway API: http://localhost:4021
+- Facilitator API: http://localhost:3000
+
+### Docker Commands
+
+```bash
+# View logs
+docker-compose logs -f
+
+# View specific service logs
+docker-compose logs -f gateway
+
+# Stop services
+docker-compose down
+
+# Rebuild after changes
+docker-compose up --build
+
+# Remove everything
+docker-compose down -v
+```
+
+See [DOCKER.md](./DOCKER.md) for detailed Docker documentation.
+
+---
+
+## 💻 Local Development Setup
 
 ### Environment Configuration
 
@@ -141,12 +191,12 @@ pnpm install
 pnpm --filter @x402-gateway/types build
 ```
 
-### Running Services
+### Running Services (Local Development)
 
 #### 1. Start Old Faithful
 ```bash
-# Old Faithful should be running on localhost:8899
-# Serving Epoch 800 data (slots 345,600,000 - 345,855,967)
+/tmp/faithful-cli rpc --listen :8899 old-faithful-epoch-800.yml
+# Runs on localhost:8899
 ```
 
 #### 2. Start Facilitator
@@ -166,20 +216,14 @@ pnpm dev
 #### 4. Start Dashboard
 ```bash
 cd frontend/dashboard
-pnpm dev
-# Runs on localhost:3002
-```
-
-### Quick Start Script
-```bash
-# Start all services
-./restart-services.sh
+pnpm build && pnpm start
+# Runs on localhost:3001 (production mode for best performance)
 ```
 
 ## Usage
 
 ### 1. Connect Wallet
-- Open dashboard at `http://localhost:3002`
+- Open dashboard at `http://localhost:3001`
 - Click "Select Wallet" and connect your Solana wallet
 - Ensure you have USDC in your wallet
 
@@ -380,8 +424,8 @@ x402-solana-hackathon/
 - Restart facilitator and gateway services
 
 ### CORS Errors
-- Ensure gateway CORS includes frontend port (3002)
-- Check `backend/gateway/src/index.ts` line 13
+- Ensure gateway CORS includes frontend port (3001)
+- Check `backend/gateway/src/index.ts` for CORS configuration
 
 ## Future Enhancements
 
