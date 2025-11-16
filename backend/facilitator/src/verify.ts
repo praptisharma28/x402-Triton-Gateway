@@ -14,8 +14,6 @@ export async function verifyPayment(
 ): Promise<VerifyResponse> {
   const { payment, requirements } = request;
 
-  console.log("[VERIFY] Verifying payment transaction...");
-
   try {
     const txBuffer = Buffer.from(payment.transaction, "base64");
     const transaction = Transaction.from(txBuffer);
@@ -33,7 +31,6 @@ export async function verifyPayment(
 
     // Transaction is already signed by user and validated
     // The user has signed with their wallet and will pay gas fees themselves
-    console.log("[VERIFY] Transaction validated successfully");
 
     return { isValid: true };
   } catch (error) {

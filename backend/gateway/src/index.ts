@@ -5,6 +5,7 @@ import { x402PaymentMiddleware } from "./middleware";
 import { proxyToUpstream, validateJsonRpcRequest } from "./proxy";
 import { receiptStore } from "./receipts";
 import { generateRangeToken, calculateRangePrice, PurchaseRangeRequest } from "./range-auth";
+import { getCachedResponse, generateCacheKey } from "./response-cache";
 
 const app = express();
 
@@ -72,8 +73,6 @@ app.post("/purchase-range", async (req: Request, res: Response) => {
     const price = calculateRangePrice(startSlot, endSlot);
     const priceInLamports = Math.floor(price * 1_000_000); // Convert to USDC lamports (6 decimals)
 
-    console.log(`[RANGE] Purchase request: ${startSlot}-${endSlot}, price: $${price}`);
-
     // TODO: Verify payment transaction signature matches the calculated price
     // For now, we'll trust the client (in production, verify via facilitator)
 
@@ -109,8 +108,6 @@ app.post("/purchase-range", async (req: Request, res: Response) => {
       usage: `Include this token in X-Range-Token header for subsequent queries`,
     });
 
-    console.log(`[RANGE] Token generated for ${payer}: ${startSlot}-${endSlot}`);
-
   } catch (error) {
     console.error("[RANGE] Error purchasing range:", error);
     res.status(500).json({
@@ -135,15 +132,22 @@ app.post("/rpc", x402PaymentMiddleware(), async (req: Request, res: Response) =>
       });
     }
 
-    // Proxy to upstream
-    const response = await proxyToUpstream(req.body);
-
-    // Log successful request
+    // Check if we have a cached response (for bandwidth-based pricing)
     const receipt = (req as any).paymentReceipt;
-    if (receipt) {
-      console.log(
-        `[GATEWAY] Successful paid request: ${receipt.method} - ${receipt.txSignature}`
-      );
+    let response;
+
+    if (receipt && receipt.invoiceId) {
+      const cacheKey = generateCacheKey(receipt.invoiceId);
+      const cachedResponse = getCachedResponse(cacheKey);
+
+      if (cachedResponse) {
+        response = cachedResponse;
+      } else {
+        response = await proxyToUpstream(req.body);
+      }
+    } else {
+      // No payment receipt (e.g., free method or range token), proxy directly
+      response = await proxyToUpstream(req.body);
     }
 
     res.json(response);

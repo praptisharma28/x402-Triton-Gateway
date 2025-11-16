@@ -50,7 +50,6 @@ app.post("/verify", async (req: Request, res: Response) => {
       });
     }
 
-    console.log("[VERIFY] Verifying payment transaction...");
     const result = await verifyPayment(verifyRequest);
 
     res.json(result);
@@ -77,7 +76,6 @@ app.post("/settle", async (req: Request, res: Response) => {
       });
     }
 
-    console.log("[SETTLE] Settling payment transaction...");
     const result = await settlePayment(settleRequest);
 
     res.json(result);

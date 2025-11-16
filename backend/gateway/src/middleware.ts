@@ -7,11 +7,18 @@ import {
 import { v4 as uuidv4 } from "uuid";
 import axios from "axios";
 import config from "./config";
-import { getPricing, usdToUsdcLamports } from "./pricing";
+import { getPricing, usdToUsdcLamports, calculateDynamicPrice } from "./pricing";
 import { receiptStore } from "./receipts";
 import { getTokenAccountAddress } from "./token";
 import { Transaction } from "@solana/web3.js";
 import { verifyRangeToken, isSlotInRange, isTransactionInRange } from "./range-auth";
+import { proxyToUpstream } from "./proxy";
+import {
+  cacheResponse,
+  getCachedResponse,
+  generateCacheKey,
+  deleteCachedResponse
+} from "./response-cache";
 
 /**
  * x402 Payment Middleware
@@ -51,11 +58,8 @@ export function x402PaymentMiddleware() {
           }
 
           if (inRange) {
-            console.log(`[RANGE-AUTH] Query authorized by range token: ${method}`);
             // Skip payment verification, allow request through
             return next();
-          } else {
-            console.log(`[RANGE-AUTH] Query outside purchased range, falling back to payment`);
           }
         }
       }
@@ -70,7 +74,23 @@ export function x402PaymentMiddleware() {
       const paymentHeader = req.headers["x-payment"];
 
       if (!paymentHeader) {
-        return send402Response(res, method, pricing.priceUSD);
+        // Generate invoice ID upfront for caching
+        const invoiceId = uuidv4();
+
+        // Fetch data from upstream to calculate dynamic pricing
+        try {
+          const upstreamResponse = await proxyToUpstream(req.body);
+          const cacheKey = generateCacheKey(invoiceId);
+          const sizeBytes = cacheResponse(cacheKey, upstreamResponse);
+          const dynamicPrice = calculateDynamicPrice(method, sizeBytes);
+
+          // Return 402 with dynamic price and invoiceId
+          return send402Response(res, method, dynamicPrice, invoiceId);
+        } catch (error) {
+          console.error('[BANDWIDTH] Error fetching for pricing:', error);
+          // Fallback to base pricing if fetch fails
+          return send402Response(res, method, pricing.priceUSD, invoiceId);
+        }
       }
 
       let payment: PaymentPayload;
@@ -204,9 +224,10 @@ export function x402PaymentMiddleware() {
 function send402Response(
   res: Response,
   method: string,
-  priceUSD: number
+  priceUSD: number,
+  invoiceId?: string
 ): void {
-  const invoiceId = uuidv4();
+  const finalInvoiceId = invoiceId || uuidv4();
 
   const requirements: PaymentRequirements = {
     version: 1,
@@ -215,7 +236,7 @@ function send402Response(
     amount: usdToUsdcLamports(priceUSD),
     currency: "USDC",
     network: config.network,
-    invoiceId,
+    invoiceId: finalInvoiceId,
     timeout: 60, // 60 seconds to pay
   };
 

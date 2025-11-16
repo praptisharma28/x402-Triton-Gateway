@@ -11,8 +11,6 @@ export async function proxyToUpstream(
   const startTime = Date.now();
 
   try {
-    console.log(`[PROXY] Forwarding ${request.method} to ${config.upstreamRpcUrl}`);
-
     const response = await axios.post<JsonRpcResponse>(
       config.upstreamRpcUrl,
       request,
@@ -23,9 +21,6 @@ export async function proxyToUpstream(
         timeout: 60000, // 60 second timeout
       }
     );
-
-    const latency = Date.now() - startTime;
-    console.log(`[PROXY] Received response in ${latency}ms`);
 
     return response.data;
   } catch (error) {

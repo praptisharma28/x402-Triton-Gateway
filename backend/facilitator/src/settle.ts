@@ -14,8 +14,6 @@ export async function settlePayment(
   const { payment } = request;
 
   try {
-    console.log("[SETTLE] Broadcasting user-signed transaction to Solana...");
-
     // User has already signed the transaction - we just broadcast it
     const connection = new Connection(config.solanaRpcUrl, "confirmed");
 
@@ -25,11 +23,8 @@ export async function settlePayment(
       preflightCommitment: "confirmed",
     });
 
-    console.log(`[SETTLE] Transaction broadcast: ${signature}`);
-
     // Return immediately after broadcast for demo purposes
     // Transaction will confirm in background
-    console.log(`[SETTLE] Transaction sent, returning signature immediately`);
 
     return {
       signature,

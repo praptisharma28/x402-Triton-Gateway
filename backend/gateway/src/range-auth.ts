@@ -48,8 +48,6 @@ export function generateRangeToken(request: PurchaseRangeRequest): string {
   // Cache the range purchase
   rangeCache.set(rangeId, payload);
 
-  console.log(`[RANGE-AUTH] Generated token for range ${request.startSlot}-${request.endSlot}, expires in ${request.duration}s`);
-
   return token;
 }
 
@@ -62,7 +60,6 @@ export function verifyRangeToken(token: string): RangeToken | null {
 
     // Check if token is expired
     if (decoded.expiresAt < Date.now()) {
-      console.log('[RANGE-AUTH] Token expired');
       return null;
     }
 
