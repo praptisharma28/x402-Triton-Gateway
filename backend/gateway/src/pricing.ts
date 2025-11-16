@@ -109,3 +109,25 @@ export function usdToUsdcLamports(usdAmount: number): string {
   const lamports = Math.floor(usdAmount * Math.pow(10, usdcDecimals));
   return lamports.toString();
 }
+
+/**
+ * Calculate bandwidth-based dynamic pricing
+ * Base price + size-based pricing
+ */
+export function calculateDynamicPrice(method: string, sizeBytes: number): number {
+  const basePolicy = getPricing(method);
+  const basePrice = basePolicy.priceUSD;
+
+  // Size-based pricing: $0.000001 per KB
+  const sizeKB = sizeBytes / 1024;
+  const sizePricePerKB = 0.000001;
+  const sizePrice = sizeKB * sizePricePerKB;
+
+  const totalPrice = basePrice + sizePrice;
+
+  console.log(
+    `[PRICING] Dynamic pricing for ${method}: base=$${basePrice}, size=${sizeBytes}B (${sizeKB.toFixed(2)}KB), size_cost=$${sizePrice.toFixed(8)}, total=$${totalPrice.toFixed(8)}`
+  );
+
+  return totalPrice;
+}

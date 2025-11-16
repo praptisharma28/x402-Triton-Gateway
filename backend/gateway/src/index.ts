@@ -5,6 +5,7 @@ import { x402PaymentMiddleware } from "./middleware";
 import { proxyToUpstream, validateJsonRpcRequest } from "./proxy";
 import { receiptStore } from "./receipts";
 import { generateRangeToken, calculateRangePrice, PurchaseRangeRequest } from "./range-auth";
+import { getCachedResponse, generateCacheKey } from "./response-cache";
 
 const app = express();
 
@@ -135,11 +136,27 @@ app.post("/rpc", x402PaymentMiddleware(), async (req: Request, res: Response) =>
       });
     }
 
-    // Proxy to upstream
-    const response = await proxyToUpstream(req.body);
+    // Check if we have a cached response (for bandwidth-based pricing)
+    const receipt = (req as any).paymentReceipt;
+    let response;
+
+    if (receipt && receipt.invoiceId) {
+      const cacheKey = generateCacheKey(receipt.invoiceId);
+      const cachedResponse = getCachedResponse(cacheKey);
+
+      if (cachedResponse) {
+        console.log(`[GATEWAY] Serving cached response for invoice ${receipt.invoiceId}`);
+        response = cachedResponse;
+      } else {
+        console.log(`[GATEWAY] Cache miss, proxying to upstream`);
+        response = await proxyToUpstream(req.body);
+      }
+    } else {
+      // No payment receipt (e.g., free method or range token), proxy directly
+      response = await proxyToUpstream(req.body);
+    }
 
     // Log successful request
-    const receipt = (req as any).paymentReceipt;
     if (receipt) {
       console.log(
         `[GATEWAY] Successful paid request: ${receipt.method} - ${receipt.txSignature}`
