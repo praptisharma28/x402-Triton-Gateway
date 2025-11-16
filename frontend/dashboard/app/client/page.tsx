@@ -15,16 +15,28 @@ const WalletMultiButton = dynamic(
 
 const GATEWAY_URL = process.env.NEXT_PUBLIC_GATEWAY_URL || 'http://localhost:4021'
 const MAINNET_USDC = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const RECIPIENT_WALLET = '62pyPYsdSLah2vDSeenEep2R2hP9jz98eDbnz4Zyb1Lf'
 
 export default function ClientPage() {
   const { connection } = useConnection()
-  const { publicKey, signTransaction } = useWallet()
+  const { publicKey, signTransaction, sendTransaction } = useWallet()
 
+  // Pay-per-query state
   const [txSignature, setTxSignature] = useState('')
   const [loading, setLoading] = useState(false)
   const [invoice, setInvoice] = useState<any>(null)
   const [result, setResult] = useState<any>(null)
   const [error, setError] = useState('')
+
+  // Range batching state
+  const [mode, setMode] = useState<'pay-per-query' | 'range-batching'>('pay-per-query')
+  const [startSlot, setStartSlot] = useState('345600000')
+  const [endSlot, setEndSlot] = useState('345610000')
+  const [duration, setDuration] = useState('3600') // 1 hour in seconds
+  const [rangeToken, setRangeToken] = useState<string | null>(null)
+  const [activeRange, setActiveRange] = useState<any>(null)
+  const [blockSlot, setBlockSlot] = useState('')
+  const [rangeTxSig, setRangeTxSig] = useState('')
 
   const handleQuery = async () => {
     if (!txSignature) {
@@ -160,6 +172,172 @@ export default function ClientPage() {
     }
   }
 
+  // Load range token from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('rangeToken')
+    const savedRange = localStorage.getItem('activeRange')
+    if (savedToken && savedRange) {
+      setRangeToken(savedToken)
+      setActiveRange(JSON.parse(savedRange))
+    }
+  }, [])
+
+  // Calculate range price
+  const calculateRangePrice = () => {
+    const start = parseInt(startSlot)
+    const end = parseInt(endSlot)
+    if (isNaN(start) || isNaN(end) || start >= end) return 0
+    const blockCount = end - start + 1
+    const pricePerBlock = 0.00001
+    return blockCount * pricePerBlock
+  }
+
+  // Purchase range access
+  const handlePurchaseRange = async () => {
+    if (!publicKey || !signTransaction || !sendTransaction) {
+      setError('Please connect your wallet first')
+      return
+    }
+
+    const start = parseInt(startSlot)
+    const end = parseInt(endSlot)
+    const dur = parseInt(duration)
+
+    if (isNaN(start) || isNaN(end) || isNaN(dur)) {
+      setError('Invalid slot range or duration')
+      return
+    }
+
+    if (start >= end) {
+      setError('Start slot must be less than end slot')
+      return
+    }
+
+    if (end - start > 10000) {
+      setError('Range too large. Maximum 10,000 blocks per purchase')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+
+    try {
+      // Create USDC payment transaction for range
+      const price = calculateRangePrice()
+      const amountLamports = Math.floor(price * 1_000_000) // USDC has 6 decimals
+
+      const recipientPubkey = new PublicKey(RECIPIENT_WALLET)
+      const usdcMint = new PublicKey(MAINNET_USDC)
+
+      const payerTokenAccount = await getAssociatedTokenAddress(usdcMint, publicKey)
+      const recipientTokenAccount = await getAssociatedTokenAddress(usdcMint, recipientPubkey)
+
+      const transaction = new Transaction()
+
+      // Check if recipient token account exists
+      const recipientAccountInfo = await connection.getAccountInfo(recipientTokenAccount)
+      if (!recipientAccountInfo) {
+        transaction.add(
+          createAssociatedTokenAccountInstruction(
+            publicKey,
+            recipientTokenAccount,
+            recipientPubkey,
+            usdcMint
+          )
+        )
+      }
+
+      transaction.add(
+        createTransferInstruction(
+          payerTokenAccount,
+          recipientTokenAccount,
+          publicKey,
+          BigInt(amountLamports),
+          [],
+          TOKEN_PROGRAM_ID
+        )
+      )
+
+      const { blockhash } = await connection.getLatestBlockhash()
+      transaction.recentBlockhash = blockhash
+      transaction.feePayer = publicKey
+
+      // Send transaction to blockchain
+      const signature = await sendTransaction(transaction, connection)
+      console.log('[RANGE] Payment transaction sent:', signature)
+
+      // Wait a moment for transaction to propagate
+      await new Promise(resolve => setTimeout(resolve, 2000))
+
+      // Call /purchase-range endpoint
+      const response = await axios.post(`${GATEWAY_URL}/purchase-range`, {
+        startSlot: start,
+        endSlot: end,
+        duration: dur,
+        paymentTxSignature: signature,
+        payer: publicKey.toBase58()
+      })
+
+      // Save token and range info
+      const token = response.data.token
+      const rangeInfo = response.data
+      setRangeToken(token)
+      setActiveRange(rangeInfo)
+      localStorage.setItem('rangeToken', token)
+      localStorage.setItem('activeRange', JSON.stringify(rangeInfo))
+
+      setLoading(false)
+      setError('')
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Range purchase failed')
+      setLoading(false)
+    }
+  }
+
+  // Query using range token
+  const handleRangeQuery = async () => {
+    if (!rangeToken) {
+      setError('No active range token. Purchase a range first.')
+      return
+    }
+
+    const method = blockSlot ? 'getBlock' : 'getTransaction'
+    const params = blockSlot ? [parseInt(blockSlot)] : [rangeTxSig]
+
+    if (!blockSlot && !rangeTxSig) {
+      setError('Please enter a block slot or transaction signature')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setResult(null)
+
+    try {
+      const response = await axios.post(
+        `${GATEWAY_URL}/rpc`,
+        {
+          jsonrpc: '2.0',
+          id: 1,
+          method,
+          params
+        },
+        {
+          headers: {
+            'X-Range-Token': rangeToken
+          },
+          timeout: 60000
+        }
+      )
+
+      setResult(response.data)
+      setLoading(false)
+    } catch (err: any) {
+      setError(err.response?.data?.error || err.message || 'Query failed')
+      setLoading(false)
+    }
+  }
+
   // Real transactions from Old Faithful Epoch 800 (slots 345,600,000 - 345,855,967)
   const EXAMPLE_TRANSACTIONS = [
     '3G8fVhYvVrHDoUQdckWsMF8EDgEpXvkzrm98EE34VHW6LFUyX8fASdoGKhCQX9zz1xLm5zjwi3DoE7FEbm4RHRSU',
@@ -183,6 +361,30 @@ export default function ClientPage() {
           </p>
         </div>
 
+        {/* Mode Selector */}
+        <div className="bg-white border border-neutral-200 rounded-lg p-2 mb-6 inline-flex gap-2">
+          <button
+            onClick={() => setMode('pay-per-query')}
+            className={`px-6 py-2 rounded-md font-sans font-medium transition-all ${
+              mode === 'pay-per-query'
+                ? 'bg-neutral-900 text-white'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Pay-per-Query
+          </button>
+          <button
+            onClick={() => setMode('range-batching')}
+            className={`px-6 py-2 rounded-md font-sans font-medium transition-all ${
+              mode === 'range-batching'
+                ? 'bg-neutral-900 text-white'
+                : 'text-neutral-600 hover:text-neutral-900'
+            }`}
+          >
+            Range Batching
+          </button>
+        </div>
+
         {/* Pricing & Wallet Row */}
         <div className="grid md:grid-cols-2 gap-6 mb-6">
           {/* Pricing Card */}
@@ -190,23 +392,46 @@ export default function ClientPage() {
             <h2 className="text-lg font-sans text-neutral-900 mb-4">
               Pricing
             </h2>
-            <div className="space-y-2 text-sm font-sans">
-              <div className="flex justify-between items-center py-2 border-b border-neutral-100">
-                <span className="text-neutral-600">getTransaction</span>
-                <span className="font-mono font-semibold text-neutral-900">$0.00002</span>
+            {mode === 'pay-per-query' ? (
+              <div className="space-y-2 text-sm font-sans">
+                <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+                  <span className="text-neutral-600">getTransaction</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.00002</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+                  <span className="text-neutral-600">getBlock</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.00005</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-neutral-600">getSignatures</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.0001</span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-3">
+                  Pay once per query. Best for occasional access.
+                </p>
               </div>
-              <div className="flex justify-between items-center py-2 border-b border-neutral-100">
-                <span className="text-neutral-600">getBlock</span>
-                <span className="font-mono font-semibold text-neutral-900">$0.00005</span>
+            ) : (
+              <div className="space-y-2 text-sm font-sans">
+                <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+                  <span className="text-neutral-600">Per Block</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.00001</span>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-neutral-100">
+                  <span className="text-neutral-600">1,000 blocks</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.01</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-neutral-600">10,000 blocks (max)</span>
+                  <span className="font-mono font-semibold text-neutral-900">$0.10</span>
+                </div>
+                <p className="text-xs text-neutral-500 mt-3">
+                  Pay once, query unlimited within range. Best for bulk access.
+                </p>
               </div>
-              <div className="flex justify-between items-center py-2">
-                <span className="text-neutral-600">getSignatures</span>
-                <span className="font-mono font-semibold text-neutral-900">$0.0001</span>
-              </div>
-            </div>
-              <p className="text-xs text-neutral-500 mt-3 font-sans">
-                All payments in USDC via x402 protocol
-              </p>
+            )}
+            <p className="text-xs text-neutral-500 mt-3 font-sans">
+              All payments in USDC via x402 protocol
+            </p>
           </div>
 
           {/* Wallet Connection */}
@@ -234,34 +459,37 @@ export default function ClientPage() {
           </div>
         </div>
 
-        {/* Example Transactions */}
-        <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
-          <h2 className="text-lg font-sans text-neutral-900 mb-3">
-            Example Transactions (Epoch 800)
-          </h2>
-          <p className="text-sm text-neutral-600 font-sans mb-4">
-            Click to test with real Solana transactions from mainnet
-          </p>
-          <div className="space-y-2">
-            {EXAMPLE_TRANSACTIONS.map((sig, i) => (
-              <button
-                key={i}
-                onClick={() => setTxSignature(sig)}
-                className="w-full text-left px-4 py-3 border border-neutral-200 rounded-lg hover:border-neutral-400 hover:bg-neutral-50 transition-all group"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-xs text-neutral-600 group-hover:text-neutral-900 break-all">
-                    {sig}
-                  </span>
-                  <span className="text-xs text-neutral-400 ml-2 whitespace-nowrap">Use →</span>
-                </div>
-              </button>
-            ))}
+        {/* Example Transactions - only show in pay-per-query mode */}
+        {mode === 'pay-per-query' && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
+            <h2 className="text-lg font-sans text-neutral-900 mb-3">
+              Example Transactions (Epoch 800)
+            </h2>
+            <p className="text-sm text-neutral-600 font-sans mb-4">
+              Click to test with real Solana transactions from mainnet
+            </p>
+            <div className="space-y-2">
+              {EXAMPLE_TRANSACTIONS.map((sig, i) => (
+                <button
+                  key={i}
+                  onClick={() => setTxSignature(sig)}
+                  className="w-full text-left px-4 py-3 border border-neutral-200 rounded-lg hover:border-neutral-400 hover:bg-neutral-50 transition-all group"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs text-neutral-600 group-hover:text-neutral-900 break-all">
+                      {sig}
+                    </span>
+                    <span className="text-xs text-neutral-400 ml-2 whitespace-nowrap">Use →</span>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Query Form */}
-        <div className="bg-white border border-neutral-200 rounded-lg p-6">
+        {/* Pay-per-Query Form */}
+        {mode === 'pay-per-query' && (
+          <div className="bg-white border border-neutral-200 rounded-lg p-6">
           <h2 className="text-lg font-sans text-neutral-900 mb-4">
             Query Transaction
           </h2>
@@ -292,6 +520,183 @@ export default function ClientPage() {
             </button>
           </div>
         </div>
+        )}
+
+        {/* Range Batching Form */}
+        {mode === 'range-batching' && (
+          <>
+            {/* Active Range Display */}
+            {activeRange && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-6 mb-6">
+                <h2 className="text-lg font-sans text-neutral-900 mb-3">
+                  Active Range Access
+                </h2>
+                <div className="space-y-2 text-sm font-sans">
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-100">
+                    <span className="text-neutral-600">Slot Range:</span>
+                    <span className="font-mono font-semibold text-neutral-900">
+                      {activeRange.range.startSlot.toLocaleString()} - {activeRange.range.endSlot.toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-100">
+                    <span className="text-neutral-600">Block Count:</span>
+                    <span className="font-mono font-semibold text-neutral-900">
+                      {activeRange.range.blockCount.toLocaleString()} blocks
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-emerald-100">
+                    <span className="text-neutral-600">Paid:</span>
+                    <span className="font-mono font-semibold text-neutral-900">
+                      {activeRange.pricing.priceUSD}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span className="text-neutral-600">Expires:</span>
+                    <span className="font-mono text-sm text-neutral-700">
+                      {new Date(activeRange.access.expiresAt).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setRangeToken(null)
+                    setActiveRange(null)
+                    localStorage.removeItem('rangeToken')
+                    localStorage.removeItem('activeRange')
+                  }}
+                  className="mt-4 w-full px-4 py-2 border border-neutral-300 text-neutral-900 rounded-lg hover:bg-neutral-50 transition-colors font-sans text-sm"
+                >
+                  Clear Range
+                </button>
+              </div>
+            )}
+
+            {/* Purchase Range Form */}
+            {!activeRange && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
+                <h2 className="text-lg font-sans text-neutral-900 mb-4">
+                  Purchase Range Access
+                </h2>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-sans text-neutral-700 mb-2">
+                        Start Slot
+                      </label>
+                      <input
+                        type="text"
+                        value={startSlot}
+                        onChange={(e) => setStartSlot(e.target.value)}
+                        placeholder="345600000"
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-sans text-neutral-700 mb-2">
+                        End Slot
+                      </label>
+                      <input
+                        type="text"
+                        value={endSlot}
+                        onChange={(e) => setEndSlot(e.target.value)}
+                        placeholder="345610000"
+                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-sans text-neutral-700 mb-2">
+                      Duration (seconds)
+                    </label>
+                    <select
+                      value={duration}
+                      onChange={(e) => setDuration(e.target.value)}
+                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-sans text-sm"
+                    >
+                      <option value="3600">1 hour (3600s)</option>
+                      <option value="7200">2 hours (7200s)</option>
+                      <option value="21600">6 hours (21600s)</option>
+                      <option value="86400">24 hours (86400s)</option>
+                    </select>
+                  </div>
+
+                  <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm font-sans text-neutral-600">Total Price:</span>
+                      <span className="font-mono font-bold text-lg text-neutral-900">
+                        ${calculateRangePrice().toFixed(8)} USDC
+                      </span>
+                    </div>
+                    <p className="text-xs text-neutral-500 mt-2 font-sans">
+                      {parseInt(endSlot) - parseInt(startSlot) + 1} blocks × $0.00001 per block
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handlePurchaseRange}
+                    disabled={loading || !publicKey}
+                    className="w-full px-6 py-3 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-sans font-medium"
+                  >
+                    {loading ? 'Processing...' : 'Purchase Range Access'}
+                  </button>
+
+                  {!publicKey && (
+                    <p className="text-sm text-neutral-600 font-sans text-center">
+                      Please connect your wallet above first
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Query with Range Token */}
+            {activeRange && (
+              <div className="bg-white border border-neutral-200 rounded-lg p-6">
+                <h2 className="text-lg font-sans text-neutral-900 mb-4">
+                  Query Within Range
+                </h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-sans text-neutral-700 mb-2">
+                      Block Slot (for getBlock)
+                    </label>
+                    <input
+                      type="text"
+                      value={blockSlot}
+                      onChange={(e) => setBlockSlot(e.target.value)}
+                      placeholder={`Enter slot between ${activeRange.range.startSlot} and ${activeRange.range.endSlot}`}
+                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono text-sm"
+                    />
+                  </div>
+
+                  <div className="text-center text-neutral-400 font-sans text-sm">OR</div>
+
+                  <div>
+                    <label className="block text-sm font-sans text-neutral-700 mb-2">
+                      Transaction Signature (for getTransaction)
+                    </label>
+                    <input
+                      type="text"
+                      value={rangeTxSig}
+                      onChange={(e) => setRangeTxSig(e.target.value)}
+                      placeholder="Enter transaction signature..."
+                      className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 font-mono text-sm"
+                    />
+                  </div>
+
+                  <button
+                    onClick={handleRangeQuery}
+                    disabled={loading || (!blockSlot && !rangeTxSig)}
+                    className="w-full px-6 py-3 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-sans font-medium"
+                  >
+                    {loading ? 'Querying...' : 'Query (Free within Range)'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
 
         {/* Invoice (402 Response) */}
         {invoice && (
