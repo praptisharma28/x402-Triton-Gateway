@@ -72,6 +72,7 @@ Historical blockchain data is valuable but expensive to maintain. This system:
 ### 1. x402 Protocol Implementation
 - HTTP 402 responses with payment requirements
 - Dynamic pricing per RPC method
+- **NEW: Range-based payment batching** - Pay once for a range of blocks
 - Cryptographic receipt generation
 
 ### 2. Old Faithful Integration
@@ -435,10 +436,127 @@ x402-solana-hackathon/
 - Ensure gateway CORS includes frontend port (3001)
 - Check `backend/gateway/src/index.ts` for CORS configuration
 
+## Range-Based Payment Batching
+
+**NEW FEATURE**: Pay once for a range of blocks, query freely within that range.
+
+### Overview
+
+Instead of paying for each individual query, purchase access to a range of slots (e.g., 345,600,000 - 345,610,000) and make unlimited queries within that range for a specified time period.
+
+**Benefits:**
+- **Lower transaction overhead**: One payment instead of many
+- **Cost-effective for bulk queries**: $0.10 for 10,000 blocks vs $0.20 for individual queries
+- **Better UX**: No payment approval for each query
+- **Ideal for researchers**: Analyze specific epochs without friction
+
+### How It Works
+
+```
+Pay Once ($0.10 for 10k blocks) → Get JWT Token → Query Freely in Range
+```
+
+1. **Purchase range access** - Pay $0.10 for slots 345,600,000-345,610,000 (10,000 blocks)
+2. **Receive JWT token** - Token contains range, expiry, and payment signature
+3. **Make queries** - Include token in `X-Range-Token` header, no payment needed
+
+### API Usage
+
+#### 1. Purchase Range Access
+
+```bash
+POST /purchase-range
+Content-Type: application/json
+
+{
+  "startSlot": 345600000,
+  "endSlot": 345610000,
+  "duration": 3600,
+  "paymentTxSignature": "5xK3...",
+  "payer": "7xKw..."
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "range": {
+    "startSlot": 345600000,
+    "endSlot": 345610000,
+    "blockCount": 10001
+  },
+  "pricing": {
+    "totalPrice": 0.10001,
+    "priceUSD": "$0.10001000",
+    "priceInLamports": 100010
+  },
+  "access": {
+    "duration": 3600,
+    "expiresAt": 1731523200000
+  }
+}
+```
+
+#### 2. Query with Range Token (No Payment!)
+
+```bash
+POST /rpc
+Content-Type: application/json
+X-Range-Token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "getBlock",
+  "params": [345605000]
+}
+```
+
+### Pricing
+
+- **$0.00001 per block** in the range
+- **Example**: 10,000 blocks = $0.10
+- **Maximum range**: 10,000 blocks per purchase
+- **Duration options**: 1 hour (3600s), 24 hours (86400s), 7 days (604800s)
+
+### Comparison
+
+| Scenario | Pay-per-Query | Range Batching |
+|----------|---------------|----------------|
+| 1 query | $0.00002 | $0.10001 |
+| 100 queries | $0.002 | $0.10001 |
+| 10,000 queries | $0.20 | $0.10001 ✅ |
+| Tx overhead | High (10k txs) | Low (1 tx) ✅ |
+| Best for | Occasional queries | Bulk analysis |
+
+### Use Cases
+
+**Research & Analysis**
+```javascript
+// Purchase range for the epoch you're researching
+const range = await purchaseRange({
+  startSlot: 345600000,
+  endSlot: 345610000,
+  duration: 86400 // 24 hours
+});
+
+// Query freely for the next 24 hours
+for (let slot = 345600000; slot <= 345610000; slot += 100) {
+  const block = await getBlock(slot, { token: range.token });
+}
+```
+
+**Historical Audits**
+- Investigate specific time periods
+- Check all transactions in a range
+- No payment friction during analysis
+
 ## Future Enhancements
 
 1. **Multi-epoch Support**: Expand beyond Epoch 800
-2. **Subscription Model**: Pre-paid query bundles
+2. **Bandwidth-based Pricing**: Charge based on actual data size returned
 3. **Token Flexibility**: Accept SOL, other SPL tokens
 4. **Advanced Pricing**: Dynamic pricing based on demand
 5. **Analytics Dashboard**: Query metrics and revenue tracking

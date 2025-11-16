@@ -4,6 +4,7 @@ import config from "./config";
 import { x402PaymentMiddleware } from "./middleware";
 import { proxyToUpstream, validateJsonRpcRequest } from "./proxy";
 import { receiptStore } from "./receipts";
+import { generateRangeToken, calculateRangePrice, PurchaseRangeRequest } from "./range-auth";
 
 const app = express();
 
@@ -16,7 +17,7 @@ app.use(cors({
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-PAYMENT');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-PAYMENT, X-Range-Token');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
   }
@@ -41,6 +42,82 @@ app.get("/receipts", (req: Request, res: Response) => {
 app.get("/stats", (req: Request, res: Response) => {
   const stats = receiptStore.getStats();
   res.json(stats);
+});
+
+// Purchase range access endpoint
+app.post("/purchase-range", async (req: Request, res: Response) => {
+  try {
+    const { startSlot, endSlot, duration, paymentTxSignature, payer } = req.body;
+
+    // Validate input
+    if (!startSlot || !endSlot || !duration || !paymentTxSignature || !payer) {
+      return res.status(400).json({
+        error: "Missing required fields: startSlot, endSlot, duration, paymentTxSignature, payer"
+      });
+    }
+
+    if (startSlot >= endSlot) {
+      return res.status(400).json({
+        error: "startSlot must be less than endSlot"
+      });
+    }
+
+    if (endSlot - startSlot > 10000) {
+      return res.status(400).json({
+        error: "Range too large. Maximum 10,000 blocks per purchase"
+      });
+    }
+
+    // Calculate price
+    const price = calculateRangePrice(startSlot, endSlot);
+    const priceInLamports = Math.floor(price * 1_000_000); // Convert to USDC lamports (6 decimals)
+
+    console.log(`[RANGE] Purchase request: ${startSlot}-${endSlot}, price: $${price}`);
+
+    // TODO: Verify payment transaction signature matches the calculated price
+    // For now, we'll trust the client (in production, verify via facilitator)
+
+    const purchaseRequest: PurchaseRangeRequest = {
+      startSlot,
+      endSlot,
+      duration,
+      paymentTxSignature,
+      payer,
+    };
+
+    // Generate JWT token
+    const token = generateRangeToken(purchaseRequest);
+
+    res.json({
+      success: true,
+      token,
+      range: {
+        startSlot,
+        endSlot,
+        blockCount: endSlot - startSlot + 1,
+      },
+      pricing: {
+        totalPrice: price,
+        priceUSD: `$${price.toFixed(8)}`,
+        priceInLamports,
+      },
+      access: {
+        duration,
+        expiresAt: Date.now() + (duration * 1000),
+        expiresAtISO: new Date(Date.now() + (duration * 1000)).toISOString(),
+      },
+      usage: `Include this token in X-Range-Token header for subsequent queries`,
+    });
+
+    console.log(`[RANGE] Token generated for ${payer}: ${startSlot}-${endSlot}`);
+
+  } catch (error) {
+    console.error("[RANGE] Error purchasing range:", error);
+    res.status(500).json({
+      error: "Failed to purchase range",
+      message: error instanceof Error ? error.message : String(error),
+    });
+  }
 });
 
 // Main RPC endpoint with x402 middleware
@@ -103,6 +180,7 @@ Facilitator: ${config.facilitatorUrl}
 
 Endpoints:
   POST /rpc              - JSON-RPC endpoint (x402 protected)
+  POST /purchase-range   - Purchase range access (NEW!)
   GET  /health           - Health check
   GET  /receipts         - Recent receipts
   GET  /stats            - Usage statistics

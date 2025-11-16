@@ -11,6 +11,7 @@ import { getPricing, usdToUsdcLamports } from "./pricing";
 import { receiptStore } from "./receipts";
 import { getTokenAccountAddress } from "./token";
 import { Transaction } from "@solana/web3.js";
+import { verifyRangeToken, isSlotInRange, isTransactionInRange } from "./range-auth";
 
 /**
  * x402 Payment Middleware
@@ -21,11 +22,42 @@ export function x402PaymentMiddleware() {
     const startTime = Date.now();
 
     try {
-      const { method } = req.body;
+      const { method, params } = req.body;
       if (!method) {
         return res.status(400).json({
           error: "Invalid JSON-RPC request: missing method",
         });
+      }
+
+      // Check for range token first
+      const rangeTokenHeader = req.headers["x-range-token"];
+      if (rangeTokenHeader) {
+        const rangeToken = verifyRangeToken(rangeTokenHeader as string);
+        if (rangeToken) {
+          // Check if the query is within the purchased range
+          let inRange = false;
+
+          if (method === "getBlock" && params && params[0]) {
+            const slot = parseInt(params[0]);
+            inRange = isSlotInRange(slot, rangeToken);
+          } else if (method === "getTransaction" && params && params[0]) {
+            // For transactions, we allow all queries within any active range
+            // In production, you'd query Old Faithful to get the slot first
+            inRange = isTransactionInRange(params[0], rangeToken);
+          } else if (method.startsWith("getBlock") || method.includes("Slot")) {
+            // Other block-related methods
+            const slot = params && params[0] ? parseInt(params[0]) : null;
+            inRange = slot ? isSlotInRange(slot, rangeToken) : false;
+          }
+
+          if (inRange) {
+            console.log(`[RANGE-AUTH] Query authorized by range token: ${method}`);
+            // Skip payment verification, allow request through
+            return next();
+          } else {
+            console.log(`[RANGE-AUTH] Query outside purchased range, falling back to payment`);
+          }
+        }
       }
 
       const pricing = getPricing(method);

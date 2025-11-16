@@ -13,11 +13,15 @@
   "dependencies": {
     "@solana/web3.js": "^1.95.8",
     "@types/cors": "^2.8.19",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node-cache": "^4.2.5",
     "@x402-gateway/types": "workspace:*",
     "axios": "^1.7.9",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "node-cache": "^5.1.2",
     "uuid": "^11.0.3"
   },
   "devDependencies": {
